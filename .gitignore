@@ -219,3 +219,6 @@ dbt_project/logs/
 
 # Streamlit
 streamlit/.streamlit/secrets.toml
+
+# Superpowers specs/plans
+docs/superpowers/
