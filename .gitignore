@@ -205,3 +205,17 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project requirements
+project-requirements-README.md
+
+#project proposal template
+proposal-template.md
+
+# dbt
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# Streamlit
+streamlit/.streamlit/secrets.toml
