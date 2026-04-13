@@ -10,7 +10,7 @@
 
 - **Role:** Sr. Data Analyst
 - **Company:** Los Angeles Kings (AEG)
-- **Link:** [Original posting URL — user to fill in if available]
+- **Link:** https://aegworldwide.com/careers/jobs/KINGS9164/la-kings---sr.-data-analyst?gh_jid=8493178002&gh_src
 
 **SQL requirement (quote the posting):** "Expertise in SQL, statistical programming (Python) and Spark" and "Build and maintain SQL-based views across data warehouses, ensuring suitability for reporting, accuracy, performance, and data integrity."
 
