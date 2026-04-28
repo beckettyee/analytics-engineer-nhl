@@ -221,4 +221,4 @@ dbt_project/logs/
 streamlit/.streamlit/secrets.toml
 
 # Superpowers specs/plans
-docs/superpowers/
+# docs/superpowers/
