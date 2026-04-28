@@ -1,4 +1,4 @@
-"""Extract LA Kings data from SeatGeek API and load to Snowflake raw tables."""
+"""Extract NHL event data from SeatGeek API and load to Snowflake raw tables."""
 
 import os
 import requests
@@ -23,21 +23,19 @@ def get_snowflake_connection():
     )
 
 
-def fetch_events(client_id):
-    """Fetch all LA Kings events, paginating through results."""
+def fetch_events_paginated(client_id, params):
+    """Fetch events with pagination, merging provided params with defaults."""
     events = []
     page = 1
     per_page = 100
     while True:
-        resp = requests.get(
-            f"{BASE_URL}/events",
-            params={
-                "performers.slug": KINGS_SLUG,
-                "per_page": per_page,
-                "page": page,
-                "client_id": client_id,
-            },
-        )
+        request_params = {
+            "per_page": per_page,
+            "page": page,
+            "client_id": client_id,
+        }
+        request_params.update(params)
+        resp = requests.get(f"{BASE_URL}/events", params=request_params)
         resp.raise_for_status()
         data = resp.json()
         batch = data.get("events", [])
@@ -48,8 +46,32 @@ def fetch_events(client_id):
         if page * per_page >= total:
             break
         page += 1
-    print(f"Fetched {len(events)} events")
     return events
+
+
+def fetch_all_nhl_events(client_id):
+    """Fetch all NHL events: league-wide + Kings-specific historical attempt."""
+    # All current NHL events (playoffs, upcoming season, etc.)
+    nhl_events = fetch_events_paginated(client_id, {"taxonomies.name": "nhl"})
+    print(f"Fetched {len(nhl_events)} NHL events (league-wide)")
+
+    # Also attempt Kings-specific events (historical season)
+    kings_events = fetch_events_paginated(client_id, {
+        "performers.slug": KINGS_SLUG,
+        "datetime_utc.gte": "2025-10-01",
+    })
+    print(f"Fetched {len(kings_events)} Kings-specific events")
+
+    # Merge, dedup by event ID
+    seen_ids = set()
+    all_events = []
+    for event in nhl_events + kings_events:
+        if event["id"] not in seen_ids:
+            seen_ids.add(event["id"])
+            all_events.append(event)
+
+    print(f"Total unique events: {len(all_events)}")
+    return all_events
 
 
 def extract_performer_ids(events):
@@ -66,7 +88,6 @@ def fetch_performers(client_id, performer_ids):
     if not performer_ids:
         print("Fetched 0 performers")
         return []
-    performers = []
     id_list = ",".join(str(pid) for pid in performer_ids)
     resp = requests.get(
         f"{BASE_URL}/performers",
@@ -198,7 +219,7 @@ def load_performers(conn, performers):
     """Upsert performers into Snowflake raw.seatgeek_performers."""
     cur = conn.cursor()
     for p in performers:
-        divisions = p.get("divisions", [])
+        divisions = p.get("divisions") or []
         conference = None
         division = None
         for d in divisions:
@@ -307,7 +328,7 @@ def main():
     client_id = get_seatgeek_client_id()
     conn = get_snowflake_connection()
 
-    events = fetch_events(client_id)
+    events = fetch_all_nhl_events(client_id)
     performer_ids = extract_performer_ids(events)
     venue_ids = extract_venue_ids(events)
 
