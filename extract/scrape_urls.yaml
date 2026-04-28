@@ -1,0 +1,49 @@
+# LA Kings / AEG sources
+- url: https://www.nhl.com/kings/team/about
+  filename: nhl-kings-about.md
+
+- url: https://www.aegworldwide.com/about
+  filename: aeg-about.md
+
+- url: https://www.aegworldwide.com/venues/cryptocom-arena
+  filename: aeg-cryptocom-arena.md
+
+- url: https://en.wikipedia.org/wiki/Los_Angeles_Kings
+  filename: wikipedia-la-kings.md
+
+- url: https://en.wikipedia.org/wiki/Crypto.com_Arena
+  filename: wikipedia-cryptocom-arena.md
+
+- url: https://en.wikipedia.org/wiki/Anschutz_Entertainment_Group
+  filename: wikipedia-aeg.md
+
+- url: https://www.nhl.com/kings/news
+  filename: nhl-kings-news.md
+
+- url: https://www.latimes.com/sports/hockey/kings
+  filename: latimes-kings-coverage.md
+
+# Ticket pricing / dynamic pricing industry sources
+- url: https://en.wikipedia.org/wiki/Dynamic_pricing
+  filename: wikipedia-dynamic-pricing.md
+
+- url: https://en.wikipedia.org/wiki/Ticket_resale
+  filename: wikipedia-ticket-resale.md
+
+- url: https://blog.seatgeek.com/
+  filename: seatgeek-blog-main.md
+
+- url: https://en.wikipedia.org/wiki/SeatGeek
+  filename: wikipedia-seatgeek.md
+
+- url: https://en.wikipedia.org/wiki/StubHub
+  filename: wikipedia-stubhub.md
+
+- url: https://en.wikipedia.org/wiki/Ticketmaster
+  filename: wikipedia-ticketmaster.md
+
+- url: https://en.wikipedia.org/wiki/National_Hockey_League
+  filename: wikipedia-nhl.md
+
+- url: https://en.wikipedia.org/wiki/AEG_Presents
+  filename: wikipedia-aeg-presents.md
