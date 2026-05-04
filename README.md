@@ -1,5 +1,7 @@
 # NHL Opponent & Schedule Intelligence Tool
 
+**[Live Dashboard](https://analytics-engineer-nhl-gnjhg8mq7ahmdg38ydk2xb.streamlit.app/)**
+
 An end-to-end data pipeline and analytics tool for NHL game scheduling, demand analysis, and ticket pricing intelligence. Built to demonstrate SQL, data pipelines, dimensional modeling, and demand/pricing analysis skills targeting the LA Kings Sr. Data Analyst role at AEG.
 
 ## Tech Stack
