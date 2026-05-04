@@ -30,6 +30,11 @@ def get_connection():
         key_data = _get_secret("SNOWFLAKE_PRIVATE_KEY")
         # Handle literal \n from TOML/env vars
         key_data = key_data.replace("\\n", "\n")
+        # Strip leading/trailing whitespace and ensure proper PEM format
+        key_data = key_data.strip()
+        # Debug: show first 40 and last 40 chars to verify format (no secret data)
+        st.write(f"DEBUG key starts with: `{key_data[:40]}` ends with: `{key_data[-40:]}`")
+        st.write(f"DEBUG key length: {len(key_data)}, newline count: {key_data.count(chr(10))}")
         pk = serialization.load_pem_private_key(key_data.encode(), password=None)
 
     private_key_bytes = pk.private_bytes(
