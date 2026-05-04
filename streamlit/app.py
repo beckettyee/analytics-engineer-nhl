@@ -191,20 +191,13 @@ def main():
         if len(strategy) == 0:
             st.info("No games available for the current filter selection.")
         else:
-            pop_75 = strategy["event_popularity"].quantile(0.75)
-            pop_25 = strategy["event_popularity"].quantile(0.25)
-            strategy["pricing_tier"] = strategy.apply(
-                lambda r: "Premium" if (r["event_popularity"] >= pop_75 or r.get("season_stage") == "postseason")
-                else ("Value" if r["event_popularity"] <= pop_25 else "Standard"),
-                axis=1
-            )
-
-            # Tier summary metrics
+            # Playoff vs Regular Season metrics
+            playoff_count = len(strategy[strategy["season_stage"] == "postseason"])
+            regular_count = len(strategy[strategy["season_stage"] != "postseason"])
             col1, col2, col3 = st.columns(3)
-            tier_counts = strategy["pricing_tier"].value_counts()
-            col1.metric("Premium Games", tier_counts.get("Premium", 0))
-            col2.metric("Standard Games", tier_counts.get("Standard", 0))
-            col3.metric("Value Games", tier_counts.get("Value", 0))
+            col1.metric("Total Games", len(strategy))
+            col2.metric("Regular Season", regular_count)
+            col3.metric("Playoff Games", playoff_count)
 
             # --- Playoff Round Demand Escalation ---
             st.subheader("Demand Escalation by Playoff Round")
@@ -256,51 +249,30 @@ def main():
             else:
                 st.info("Filter to 'postseason' or 'All' to see playoff round analysis.")
 
-            st.subheader("Pricing Tier Distribution")
-            tier_order = ["Premium", "Standard", "Value"]
-            color_map = {"Premium": "#e74c3c", "Standard": "#3498db", "Value": "#2ecc71"}
-            tier_df = strategy["pricing_tier"].value_counts().reindex(tier_order).reset_index()
-            tier_df.columns = ["Pricing Tier", "Game Count"]
-            fig7 = px.bar(tier_df, x="Pricing Tier", y="Game Count", color="Pricing Tier",
-                          color_discrete_map=color_map)
+            st.subheader("Regular Season vs Postseason Demand")
+            stage_pop = strategy.groupby("season_stage")["event_popularity"].mean().reset_index()
+            stage_pop["season_stage"] = stage_pop["season_stage"].fillna("Regular Season")
+            stage_pop.columns = ["Stage", "Avg Popularity"]
+            fig7 = px.bar(stage_pop, x="Stage", y="Avg Popularity",
+                          color="Stage", color_discrete_map={"Regular Season": "#3498db", "postseason": "#e74c3c"},
+                          labels={"Avg Popularity": "Avg Demand (Popularity)"})
             st.plotly_chart(fig7, use_container_width=True)
 
-            st.subheader("Demand Score by Pricing Tier")
-            tier_pop = strategy.groupby("pricing_tier")["event_popularity"].mean().reindex(tier_order).reset_index()
-            tier_pop.columns = ["Pricing Tier", "Avg Popularity"]
-            fig8 = px.bar(tier_pop, x="Pricing Tier", y="Avg Popularity", color="Pricing Tier",
-                          color_discrete_map=color_map)
+            st.subheader("Popularity vs Score — Playoff vs Regular Season")
+            scatter_data = strategy.copy()
+            scatter_data["stage_label"] = scatter_data["season_stage"].apply(
+                lambda x: "Postseason" if x == "postseason" else "Regular Season"
+            )
+            fig8 = px.scatter(scatter_data, x="event_score", y="event_popularity", color="stage_label",
+                              color_discrete_map={"Postseason": "#e74c3c", "Regular Season": "#3498db"},
+                              hover_data=["short_title", "home_team_name"],
+                              labels={"event_score": "Matchup Score", "event_popularity": "Demand (Popularity)", "stage_label": "Stage"})
             st.plotly_chart(fig8, use_container_width=True)
 
-            st.subheader("Pricing Tier by Day of Week")
-            if "day_name" in strategy.columns:
-                day_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                day_tier = strategy.groupby(["day_name", "pricing_tier"]).size().reset_index(name="count")
-                day_tier["day_name"] = pd.Categorical(day_tier["day_name"], categories=day_order, ordered=True)
-                day_tier = day_tier.sort_values("day_name")
-                fig9 = px.bar(day_tier, x="day_name", y="count", color="pricing_tier",
-                              color_discrete_map=color_map, barmode="stack",
-                              labels={"day_name": "Day", "count": "Games", "pricing_tier": "Tier"})
-                st.plotly_chart(fig9, use_container_width=True)
-
-            st.subheader("Popularity vs Score — Colored by Pricing Tier")
-            fig10 = px.scatter(strategy, x="event_score", y="event_popularity", color="pricing_tier",
-                               color_discrete_map=color_map,
-                               hover_data=["short_title", "home_team_name"],
-                               labels={"event_score": "Matchup Score", "event_popularity": "Demand (Popularity)", "pricing_tier": "Tier"})
-            st.plotly_chart(fig10, use_container_width=True)
-
-            st.subheader("Game-Level Pricing Recommendations")
-            rec_cols = ["short_title", "datetime_local", "home_team_name", "venue_name", "event_popularity", "event_score", "season_stage", "pricing_tier"]
+            st.subheader("Game-Level Detail")
+            rec_cols = ["short_title", "datetime_local", "home_team_name", "venue_name", "event_popularity", "event_score", "season_stage"]
             available_rec = [c for c in rec_cols if c in strategy.columns]
             st.dataframe(strategy[available_rec].sort_values("event_popularity", ascending=False), use_container_width=True)
-
-            st.markdown("""
-            **Tier Logic:**
-            - **Premium:** Top 25% popularity OR playoff games — price up 20-30% from base
-            - **Standard:** Middle 50% popularity — base pricing
-            - **Value:** Bottom 25% popularity — promote with bundles/discounts to drive volume
-            """)
 
 
 if __name__ == "__main__":
