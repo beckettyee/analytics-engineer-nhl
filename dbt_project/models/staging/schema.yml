@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_seatgeek_events
+    description: Cleaned NHL events from SeatGeek
+    columns:
+      - name: event_id
+        description: Unique event identifier
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_seatgeek_performers
+    description: NHL teams filtered from SeatGeek performers
+    columns:
+      - name: team_id
+        description: Unique team identifier
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_seatgeek_venues
+    description: Cleaned venue data from SeatGeek
+    columns:
+      - name: venue_id
+        description: Unique venue identifier
+        tests:
+          - unique
+          - not_null
