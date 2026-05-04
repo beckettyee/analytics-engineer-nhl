@@ -14,9 +14,14 @@ st.set_page_config(page_title="NHL Schedule Intelligence", layout="wide")
 def _get_secret(key, default=""):
     """Get a config value from Streamlit secrets or environment variables."""
     try:
-        return st.secrets[key]
-    except (KeyError, FileNotFoundError, Exception):
-        return os.environ.get(key, default)
+        val = st.secrets[key]
+        st.write(f"DEBUG: got `{key}` from st.secrets (len={len(str(val))})")
+        return val
+    except Exception as e:
+        st.write(f"DEBUG: st.secrets[{key}] failed: {type(e).__name__}: {e}")
+        val = os.environ.get(key, default)
+        st.write(f"DEBUG: env fallback for `{key}` (len={len(str(val))})")
+        return val
 
 
 @st.cache_resource
