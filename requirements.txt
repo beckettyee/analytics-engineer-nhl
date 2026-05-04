@@ -1,4 +1,5 @@
 snowflake-connector-python
+cryptography
 requests
 firecrawl-py
 pyyaml

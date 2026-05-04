@@ -2,13 +2,36 @@
 
 import os
 import snowflake.connector
+from cryptography.hazmat.primitives import serialization
+
+
+def load_private_key():
+    """Load RSA private key from file or env var."""
+    key_path = os.environ.get("SNOWFLAKE_PRIVATE_KEY_PATH", "snowflake_key.p8")
+    if os.path.exists(key_path):
+        with open(key_path, "rb") as f:
+            private_key = serialization.load_pem_private_key(f.read(), password=None)
+        return private_key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    key_data = os.environ.get("SNOWFLAKE_PRIVATE_KEY")
+    if key_data:
+        private_key = serialization.load_pem_private_key(key_data.encode(), password=None)
+        return private_key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    raise ValueError("No Snowflake private key found (file or env var)")
 
 
 def get_connection():
     return snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
+        private_key=load_private_key(),
         warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
     )
 

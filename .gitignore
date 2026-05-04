@@ -220,5 +220,9 @@ dbt_project/logs/
 # Streamlit
 streamlit/.streamlit/secrets.toml
 
+# Snowflake key pair
+snowflake_key.p8
+snowflake_key.pub
+
 # Superpowers specs/plans
 # docs/superpowers/

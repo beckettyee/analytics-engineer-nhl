@@ -3,6 +3,7 @@
 import os
 import requests
 import snowflake.connector
+from cryptography.hazmat.primitives import serialization
 
 BASE_URL = "https://api.seatgeek.com/2"
 KINGS_SLUG = "los-angeles-kings"
@@ -12,11 +13,34 @@ def get_seatgeek_client_id():
     return os.environ["SEATGEEK_CLIENT_ID"]
 
 
+def load_private_key():
+    """Load RSA private key from file or env var."""
+    key_path = os.environ.get("SNOWFLAKE_PRIVATE_KEY_PATH", "snowflake_key.p8")
+    if os.path.exists(key_path):
+        with open(key_path, "rb") as f:
+            private_key = serialization.load_pem_private_key(f.read(), password=None)
+        return private_key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    # For GitHub Actions: key stored as env var
+    key_data = os.environ.get("SNOWFLAKE_PRIVATE_KEY")
+    if key_data:
+        private_key = serialization.load_pem_private_key(key_data.encode(), password=None)
+        return private_key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    raise ValueError("No Snowflake private key found (file or env var)")
+
+
 def get_snowflake_connection():
     return snowflake.connector.connect(
         account=os.environ["SNOWFLAKE_ACCOUNT"],
         user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
+        private_key=load_private_key(),
         database=os.environ.get("SNOWFLAKE_DATABASE", "NHL_ANALYTICS"),
         warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
         schema="RAW",
