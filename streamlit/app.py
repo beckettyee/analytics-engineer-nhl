@@ -1,6 +1,7 @@
 """NHL Opponent & Schedule Intelligence Dashboard."""
 
 import os
+import base64
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -14,14 +15,9 @@ st.set_page_config(page_title="NHL Schedule Intelligence", layout="wide")
 def _get_secret(key, default=""):
     """Get a config value from Streamlit secrets or environment variables."""
     try:
-        val = st.secrets[key]
-        st.write(f"DEBUG: got `{key}` from st.secrets (len={len(str(val))})")
-        return val
-    except Exception as e:
-        st.write(f"DEBUG: st.secrets[{key}] failed: {type(e).__name__}: {e}")
-        val = os.environ.get(key, default)
-        st.write(f"DEBUG: env fallback for `{key}` (len={len(str(val))})")
-        return val
+        return st.secrets[key]
+    except Exception:
+        return os.environ.get(key, default)
 
 
 @st.cache_resource
@@ -32,15 +28,14 @@ def get_connection():
         with open(key_path, "rb") as f:
             pk = serialization.load_pem_private_key(f.read(), password=None)
     else:
-        key_data = _get_secret("SNOWFLAKE_PRIVATE_KEY")
-        # Handle literal \n from TOML/env vars
-        key_data = key_data.replace("\\n", "\n")
-        # Strip leading/trailing whitespace and ensure proper PEM format
-        key_data = key_data.strip()
-        # Debug: show first 40 and last 40 chars to verify format (no secret data)
-        st.write(f"DEBUG key starts with: `{key_data[:40]}` ends with: `{key_data[-40:]}`")
-        st.write(f"DEBUG key length: {len(key_data)}, newline count: {key_data.count(chr(10))}")
-        pk = serialization.load_pem_private_key(key_data.encode(), password=None)
+        key_b64 = _get_secret("SNOWFLAKE_PRIVATE_KEY_B64")
+        if key_b64:
+            key_bytes = base64.b64decode(key_b64)
+        else:
+            key_data = _get_secret("SNOWFLAKE_PRIVATE_KEY")
+            key_data = key_data.replace("\\n", "\n").strip()
+            key_bytes = key_data.encode()
+        pk = serialization.load_pem_private_key(key_bytes, password=None)
 
     private_key_bytes = pk.private_bytes(
         encoding=serialization.Encoding.DER,
