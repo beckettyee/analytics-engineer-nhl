@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: fact_games
+    description: One row per NHL game/event with measures and dimension FKs
+    columns:
+      - name: game_id
+        description: Unique game identifier
+        tests:
+          - unique
+          - not_null
+      - name: venue_id
+        tests:
+          - relationships:
+              to: ref('dim_venues')
+              field: venue_id
+              config:
+                severity: warn
+      - name: date_id
+        tests:
+          - relationships:
+              to: ref('dim_dates')
+              field: date_id
+
+  - name: dim_teams
+    description: One row per NHL team
+    columns:
+      - name: team_id
+        description: Unique team identifier
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_dates
+    description: Date dimension generated from game dates
+    columns:
+      - name: date_id
+        description: Date key in YYYYMMDD format
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_venues
+    description: NHL arena information
+    columns:
+      - name: venue_id
+        description: Unique venue identifier
+        tests:
+          - unique
+          - not_null
