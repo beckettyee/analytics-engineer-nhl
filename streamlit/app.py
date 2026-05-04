@@ -28,6 +28,8 @@ def get_connection():
             pk = serialization.load_pem_private_key(f.read(), password=None)
     else:
         key_data = _get_secret("SNOWFLAKE_PRIVATE_KEY")
+        # Handle literal \n from TOML/env vars
+        key_data = key_data.replace("\\n", "\n")
         pk = serialization.load_pem_private_key(key_data.encode(), password=None)
 
     private_key_bytes = pk.private_bytes(
