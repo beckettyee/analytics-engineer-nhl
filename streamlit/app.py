@@ -118,7 +118,7 @@ def main():
         filtered = filtered[filtered["venue_name"].isin(selected_venues)]
 
     # --- Tabs ---
-    tab1, tab2, tab3 = st.tabs(["Schedule Overview", "Demand Analysis", "Pricing Intelligence"])
+    tab1, tab2, tab3 = st.tabs(["Schedule Overview", "Demand Analysis", "Pricing Strategy"])
 
     # --- Tab 1: Schedule Overview (Descriptive) ---
     with tab1:
@@ -179,34 +179,78 @@ def main():
             fig6 = px.bar(weekend_pop, x="is_weekend", y="event_popularity", labels={"is_weekend": "", "event_popularity": "Avg Popularity"})
             st.plotly_chart(fig6, use_container_width=True)
 
-    # --- Tab 3: Pricing Intelligence (Diagnostic) ---
+    # --- Tab 3: Pricing Strategy (Diagnostic) ---
     with tab3:
-        st.header("Pricing Intelligence")
+        st.header("Pricing Strategy")
+        st.markdown("Which games should be priced at a premium vs. discounted? Using demand signals (popularity, matchup score, timing) to recommend pricing tiers.")
 
-        priced = filtered[filtered["stats_average_price"].notna()]
+        # Assign pricing tiers based on demand signals
+        strategy = filtered.copy()
+        strategy = strategy[strategy["event_popularity"].notna() & strategy["home_team_name"].notna()]
 
-        if len(priced) == 0:
-            st.info("No pricing data available for the current selection. Pricing data appears when tickets are actively listed on SeatGeek.")
-            st.markdown("**Why?** SeatGeek only shows pricing for events with active ticket listings. Completed games and far-future events typically have no pricing data.")
+        if len(strategy) == 0:
+            st.info("No games available for the current filter selection.")
         else:
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Avg Ticket Price", f"${priced['stats_average_price'].mean():.0f}")
-            col2.metric("Lowest Available", f"${priced['stats_lowest_price'].min():.0f}")
-            col3.metric("Highest Listed", f"${priced['stats_highest_price'].max():.0f}")
+            pop_75 = strategy["event_popularity"].quantile(0.75)
+            pop_25 = strategy["event_popularity"].quantile(0.25)
+            strategy["pricing_tier"] = strategy.apply(
+                lambda r: "Premium" if (r["event_popularity"] >= pop_75 or r.get("season_stage") == "postseason")
+                else ("Value" if r["event_popularity"] <= pop_25 else "Standard"),
+                axis=1
+            )
 
-            st.subheader("Price Distribution")
-            fig7 = px.histogram(priced, x="stats_average_price", nbins=20, labels={"stats_average_price": "Average Ticket Price ($)"})
+            # Tier summary metrics
+            col1, col2, col3 = st.columns(3)
+            tier_counts = strategy["pricing_tier"].value_counts()
+            col1.metric("Premium Games", tier_counts.get("Premium", 0))
+            col2.metric("Standard Games", tier_counts.get("Standard", 0))
+            col3.metric("Value Games", tier_counts.get("Value", 0))
+
+            st.subheader("Pricing Tier Distribution")
+            tier_order = ["Premium", "Standard", "Value"]
+            color_map = {"Premium": "#e74c3c", "Standard": "#3498db", "Value": "#2ecc71"}
+            tier_df = strategy["pricing_tier"].value_counts().reindex(tier_order).reset_index()
+            tier_df.columns = ["Pricing Tier", "Game Count"]
+            fig7 = px.bar(tier_df, x="Pricing Tier", y="Game Count", color="Pricing Tier",
+                          color_discrete_map=color_map)
             st.plotly_chart(fig7, use_container_width=True)
 
-            st.subheader("Price vs Popularity")
-            fig8 = px.scatter(priced, x="event_popularity", y="stats_average_price", hover_data=["short_title"],
-                              labels={"event_popularity": "Popularity", "stats_average_price": "Avg Price ($)"})
+            st.subheader("Demand Score by Pricing Tier")
+            tier_pop = strategy.groupby("pricing_tier")["event_popularity"].mean().reindex(tier_order).reset_index()
+            tier_pop.columns = ["Pricing Tier", "Avg Popularity"]
+            fig8 = px.bar(tier_pop, x="Pricing Tier", y="Avg Popularity", color="Pricing Tier",
+                          color_discrete_map=color_map)
             st.plotly_chart(fig8, use_container_width=True)
 
-            st.subheader("Pricing by Home Team")
-            team_price = priced.groupby("home_team_name")["stats_average_price"].mean().reset_index().sort_values("stats_average_price", ascending=False)
-            fig9 = px.bar(team_price, x="home_team_name", y="stats_average_price", labels={"home_team_name": "Home Team", "stats_average_price": "Avg Price ($)"})
-            st.plotly_chart(fig9, use_container_width=True)
+            st.subheader("Pricing Tier by Day of Week")
+            if "day_name" in strategy.columns:
+                day_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                day_tier = strategy.groupby(["day_name", "pricing_tier"]).size().reset_index(name="count")
+                day_tier["day_name"] = pd.Categorical(day_tier["day_name"], categories=day_order, ordered=True)
+                day_tier = day_tier.sort_values("day_name")
+                fig9 = px.bar(day_tier, x="day_name", y="count", color="pricing_tier",
+                              color_discrete_map=color_map, barmode="stack",
+                              labels={"day_name": "Day", "count": "Games", "pricing_tier": "Tier"})
+                st.plotly_chart(fig9, use_container_width=True)
+
+            st.subheader("Popularity vs Score — Colored by Pricing Tier")
+            fig10 = px.scatter(strategy, x="event_score", y="event_popularity", color="pricing_tier",
+                               color_discrete_map=color_map,
+                               hover_data=["short_title", "home_team_name"],
+                               labels={"event_score": "Matchup Score", "event_popularity": "Demand (Popularity)", "pricing_tier": "Tier"})
+            st.plotly_chart(fig10, use_container_width=True)
+
+            st.subheader("Game-Level Pricing Recommendations")
+            rec_cols = ["short_title", "datetime_local", "home_team_name", "venue_name", "event_popularity", "event_score", "season_stage", "pricing_tier"]
+            available_rec = [c for c in rec_cols if c in strategy.columns]
+            st.dataframe(strategy[available_rec].sort_values("event_popularity", ascending=False), use_container_width=True)
+
+            st.markdown("""
+            **Tier Logic:**
+            - **Premium:** Top 25% popularity OR playoff games — price up 20-30% from base
+            - **Standard:** Middle 50% popularity — base pricing
+            - **Value:** Bottom 25% popularity — promote with bundles/discounts to drive volume
+            """)
 
 
 if __name__ == "__main__":
