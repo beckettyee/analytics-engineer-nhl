@@ -58,6 +58,9 @@ def get_connection():
 def load_data():
     """Load all mart tables into DataFrames."""
     conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("ALTER WAREHOUSE COMPUTE_WH RESUME IF SUSPENDED")
+    cur.close()
     games = pd.read_sql("SELECT * FROM fact_games", conn)
     teams = pd.read_sql("SELECT * FROM dim_teams", conn)
     dates = pd.read_sql("SELECT * FROM dim_dates", conn)
