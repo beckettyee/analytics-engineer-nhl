@@ -20,6 +20,13 @@ def _get_secret(key, default=""):
         return os.environ.get(key, default)
 
 
+# DEBUG: Show all available secrets keys (no values)
+try:
+    st.write(f"DEBUG: secrets keys = {list(st.secrets.keys())}")
+except Exception as e:
+    st.write(f"DEBUG: cannot read secrets at all: {type(e).__name__}: {e}")
+
+
 @st.cache_resource
 def get_connection():
     """Connect to Snowflake using key pair auth."""
