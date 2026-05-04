@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'NHL_ANALYTICS') }}"
+    schema: RAW
+    tables:
+      - name: seatgeek_events
+        description: Raw NHL event data from SeatGeek API
+      - name: seatgeek_performers
+        description: Raw performer/team data from SeatGeek API
+      - name: seatgeek_venues
+        description: Raw venue data from SeatGeek API
