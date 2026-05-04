@@ -206,6 +206,56 @@ def main():
             col2.metric("Standard Games", tier_counts.get("Standard", 0))
             col3.metric("Value Games", tier_counts.get("Value", 0))
 
+            # --- Playoff Round Demand Escalation ---
+            st.subheader("Demand Escalation by Playoff Round")
+            st.markdown("How much does demand increase as the playoffs progress?")
+
+            def get_playoff_round(title):
+                t = str(title).lower()
+                if "stanley cup final" in t:
+                    return "Stanley Cup Finals"
+                elif "conference final" in t:
+                    return "Conference Finals"
+                elif "second round" in t:
+                    return "Second Round"
+                elif "first round" in t:
+                    return "First Round"
+                else:
+                    return None
+
+            playoff_games = strategy[strategy["season_stage"] == "postseason"].copy()
+            if len(playoff_games) > 0:
+                playoff_games["playoff_round"] = playoff_games["title"].apply(get_playoff_round)
+                playoff_games = playoff_games[playoff_games["playoff_round"].notna()]
+
+                if len(playoff_games) > 0:
+                    round_order = ["First Round", "Second Round", "Conference Finals", "Stanley Cup Finals"]
+                    round_stats = playoff_games.groupby("playoff_round").agg(
+                        avg_popularity=("event_popularity", "mean"),
+                        avg_score=("event_score", "mean"),
+                        game_count=("game_id", "count")
+                    ).reindex(round_order).dropna().reset_index()
+                    round_stats.columns = ["Playoff Round", "Avg Popularity", "Avg Score", "Games"]
+
+                    fig_round = px.bar(round_stats, x="Playoff Round", y="Avg Popularity",
+                                       text="Games", color="Avg Score",
+                                       color_continuous_scale=["#3498db", "#e74c3c"],
+                                       labels={"Avg Popularity": "Avg Demand (Popularity)", "Avg Score": "Matchup Score"})
+                    fig_round.update_traces(texttemplate="%{text} games", textposition="outside")
+                    st.plotly_chart(fig_round, use_container_width=True)
+
+                    # Regular season vs playoff comparison
+                    reg_pop = strategy[strategy["season_stage"] != "postseason"]["event_popularity"].mean()
+                    playoff_pop = playoff_games["event_popularity"].mean()
+                    if reg_pop > 0:
+                        lift = ((playoff_pop - reg_pop) / reg_pop) * 100
+                        st.metric("Playoff Demand Lift vs Regular Season", f"+{lift:.0f}%",
+                                  delta=f"{playoff_pop:.3f} vs {reg_pop:.3f} avg popularity")
+                else:
+                    st.info("No playoff round data available in current selection.")
+            else:
+                st.info("Filter to 'postseason' or 'All' to see playoff round analysis.")
+
             st.subheader("Pricing Tier Distribution")
             tier_order = ["Premium", "Standard", "Value"]
             color_map = {"Premium": "#e74c3c", "Standard": "#3498db", "Value": "#2ecc71"}
