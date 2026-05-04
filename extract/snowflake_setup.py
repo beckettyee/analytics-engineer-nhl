@@ -119,6 +119,15 @@ def setup_snowflake():
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scraped_documents (
+            filename VARCHAR PRIMARY KEY,
+            url VARCHAR,
+            content VARCHAR,
+            _loaded_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+        )
+    """)
+
     print(f"Setup complete: {database} with RAW, STAGING, MART schemas and raw tables.")
     cur.close()
     conn.close()
