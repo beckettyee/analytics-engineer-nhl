@@ -11,6 +11,14 @@ from cryptography.hazmat.primitives import serialization
 st.set_page_config(page_title="NHL Schedule Intelligence", layout="wide")
 
 
+def _get_secret(key, default=""):
+    """Get a config value from Streamlit secrets or environment variables."""
+    try:
+        return st.secrets[key]
+    except (KeyError, FileNotFoundError, Exception):
+        return os.environ.get(key, default)
+
+
 @st.cache_resource
 def get_connection():
     """Connect to Snowflake using key pair auth."""
@@ -19,7 +27,7 @@ def get_connection():
         with open(key_path, "rb") as f:
             pk = serialization.load_pem_private_key(f.read(), password=None)
     else:
-        key_data = st.secrets.get("SNOWFLAKE_PRIVATE_KEY", os.environ.get("SNOWFLAKE_PRIVATE_KEY", ""))
+        key_data = _get_secret("SNOWFLAKE_PRIVATE_KEY")
         pk = serialization.load_pem_private_key(key_data.encode(), password=None)
 
     private_key_bytes = pk.private_bytes(
@@ -29,11 +37,11 @@ def get_connection():
     )
 
     return snowflake.connector.connect(
-        account=st.secrets.get("SNOWFLAKE_ACCOUNT", os.environ.get("SNOWFLAKE_ACCOUNT", "")),
-        user=st.secrets.get("SNOWFLAKE_USER", os.environ.get("SNOWFLAKE_USER", "")),
+        account=_get_secret("SNOWFLAKE_ACCOUNT"),
+        user=_get_secret("SNOWFLAKE_USER"),
         private_key=private_key_bytes,
-        database=st.secrets.get("SNOWFLAKE_DATABASE", os.environ.get("SNOWFLAKE_DATABASE", "NHL_ANALYTICS")),
-        warehouse=st.secrets.get("SNOWFLAKE_WAREHOUSE", os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH")),
+        database=_get_secret("SNOWFLAKE_DATABASE", "NHL_ANALYTICS"),
+        warehouse=_get_secret("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
         schema="MART",
     )
 
